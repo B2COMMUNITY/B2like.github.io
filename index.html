@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>وب سایت  b2 موویز</title>
+<style>
+body {
+    font-family: Tahoma, sans-serif;
+    direction: rtl;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1950&q=80') no-repeat center center/cover;
+}
+.container {
+    width: 480px;
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    transition: all 0.5s ease;
+}
+h1,h2,h3,h4 { color: #fff; }
+button {
+    width: 100%;
+    padding: 15px;
+    margin: 10px 0;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+button:hover { transform: scale(1.05); opacity: 0.9; }
+.btn-admin { background: #ff6b6b; color: #fff; }
+.btn-user { background: #4ecdc4; color: #fff; }
+.btn-category { background: #ffe66d; color: #333; }
+.btn-delete { background: #ff4757; color: #fff; margin-left:10px; }
+.form-slide {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 0 10px;
+    margin-bottom: 10px;
+}
+.form-slide input, .form-slide select {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+}
+.video-card {
+    background: rgba(255,255,255,0.2);
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(50px);
+    animation-fill-mode: forwards;
+}
+video { max-width: 100%; border-radius: 12px; }
+@keyframes slideUp {
+    to { opacity:1; transform:translateY(0); }
+}
+#toast {
+    visibility: hidden;
+    min-width: 250px;
+    margin-left: -125px;
+    background-color: rgba(0,0,0,0.7);
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 15px;
+    position: fixed;
+    z-index: 1000;
+    left: 50%;
+    bottom: 30px;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.5s, visibility 0.5s;
+}
+#toast.show { visibility: visible; opacity: 1; }
+#adminFilmList {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+</style>
+</head>
+<body>
+<div class="container" id="container">
+<h1>وبسایت b2 موویز</h1>
+
+<div id="loginSection">
+    <button class="btn-admin" onclick="toggleForm('admin')">مدیر</button>
+    <div id="adminForm" class="form-slide">
+        <input type="password" id="adminCode" placeholder="مدیر محترم رمز را وارد کنید">
+        <br>
+        <button class="btn-admin" onclick="adminLogin()">ورود</button>
+    </div>
+
+    <button class="btn-user" onclick="toggleForm('user')">کاربر</button>
+    <div id="userForm" class="form-slide">
+        <input type="text" id="userCode" placeholder="کد اشتراک">
+        <br>
+        <button class="btn-user" onclick="userLogin()">ورود</button>
+    </div>
+</div>
+
+<div id="adminDiv" style="display:none;"></div>
+<div id="userDiv" style="display:none;"></div>
+<div id="toast"></div>
+</div>
+
+<script>
+let films = JSON.parse(localStorage.getItem('films')) || {khoafan: [], other: []};
+
+function toggleForm(role){
+    const adminForm = document.getElementById('adminForm');
+    const userForm = document.getElementById('userForm');
+    if(role==='admin'){ adminForm.style.maxHeight = adminForm.style.maxHeight ? null : adminForm.scrollHeight + "px"; userForm.style.maxHeight = null; }
+    else { userForm.style.maxHeight = userForm.style.maxHeight ? null : userForm.scrollHeight + "px"; adminForm.style.maxHeight = null; }
+}
+
+function showToast(msg){
+    const toast = document.getElementById('toast');
+    toast.innerText = msg;
+    toast.className = 'show';
+    setTimeout(()=>{ toast.className = toast.className.replace('show',''); },3000);
+}
+
+function adminLogin(){
+    const code = document.getElementById('adminCode').value;
+    if(code==='222'){ document.getElementById('loginSection').style.display='none'; showAdminPanel(); showToast('ورود مدیر موفقیت‌آمیز بود!'); }
+    else showToast('کد وارد شده اشتباه است');
+}
+
+function userLogin(){
+    const code = document.getElementById('userCode').value;
+    const day = new Date().getDay();
+    let valid=false;
+    if((day===0 || day===6) && code==='200') valid=true;
+    if((day===1 || day===2) && code==='399') valid=true;
+    if(day>=3 && day<=5 && code==='401') valid=true;
+    if(valid){ document.getElementById('loginSection').style.display='none'; showUserPanel(); showToast('ورود شما موفقیت امیز بود'); }
+    else showToast('کد اشتراک اشتباه است');
+}
+
+function showAdminPanel(){
+    const div = document.getElementById('adminDiv');
+    div.style.display='block';
+    div.innerHTML = `
+        <h2>پنل مدیر</h2>
+        <select id="catSelect" class="form-slide">
+            <option value="khoafan">خفن‌ترین‌ها</option>
+            <option value="other">غیره</option>
+        </select>
+        <input type="text" id="videoLink" placeholder="لینک فیلم آنلاین">
+        <br>
+        <button class="btn-admin" onclick="addFilm()">افزودن فیلم</button>
+        <h3>فیلم‌های موجود:</h3>
+        <div id="adminFilmList"></div>
+        <button class="btn-admin" onclick="backToLogin()">خروج</button>`;
+    updateAdminFilmList();
+}
+
+function addFilm(){
+    const cat = document.getElementById('catSelect').value;
+    const link = document.getElementById('videoLink').value.trim();
+    if(!link){ showToast('لینک وارد کنید'); return; }
+    films[cat].push(link);
+    localStorage.setItem('films', JSON.stringify(films));
+    document.getElementById('videoLink').value='';
+    updateAdminFilmList();
+    showToast('فیلم اضافه شد!');
+    document.getElementById('adminFilmList').scrollTop = 0;
+}
+
+function deleteFilm(cat,index){
+    if(confirm("آیا از حذف این فیلم مطمئن هستید؟")){
+        films[cat].splice(index,1);
+        localStorage.setItem('films', JSON.stringify(films));
+        updateAdminFilmList();
+        showToast('فیلم حذف شد!');
+    }
+}
+
+function updateAdminFilmList(){
+    let html = '';
+    for(let cat in films){
+        html += `<h4>${cat==='khoafan'?'خفن‌ترین‌ها':'غیره'}</h4>`;
+        films[cat].forEach((link,i)=>{
+            html += `<div class="video-card" style="animation: slideUp 0.5s ease forwards; animation-delay:${i*0.1}s">
+                <video controls src="${link}"></video>
+                <p>فیلم ${i+1}</p>
+                <button class="btn-delete" onclick="deleteFilm('${cat}',${i})">حذف</button>
+            </div>`;
+        });
+    }
+    document.getElementById('adminFilmList').innerHTML = html;
+}
+
+function showUserPanel(){
+    const div = document.getElementById('userDiv');
+    div.style.display='block';
+    div.innerHTML = `
+        <h2>دسته بندی‌ها</h2>
+        <div id="categoryButtons">
+            <button class="btn-category" onclick="showFilms('khoafan')">خفن‌ترین‌ها</button>
+            <button class="btn-category" onclick="showFilms('other')">غیره</button>
+        </div>
+        <div id="filmList" style="margin-top:20px;"></div>`;
+}
+
+function showFilms(cat){
+    const buttonsDiv = document.getElementById('categoryButtons');
+    buttonsDiv.style.display='none';
+    const filmDiv = document.getElementById('filmList');
+    filmDiv.innerHTML = `<button class="btn-category" onclick="backToCategories()">برگشت</button>`;
+    films[cat].forEach((link,i)=>{
+        filmDiv.innerHTML += `<div class="video-card" style="animation: slideUp 0.5s ease forwards; animation-delay:${i*0.1}s">
+            <video controls src="${link}"></video>
+            <p>فیلم ${i+1}</p>
+        </div>`;
+    });
+}
+
+function backToCategories(){
+    const filmDiv = document.getElementById('filmList');
+    filmDiv.innerHTML='';
+    document.getElementById('categoryButtons').style.display='block';
+}
+
+function backToLogin(){
+    document.getElementById('adminDiv').style.display='none';
+    document.getElementById('loginSection').style.display='block';
+}
+</script>
+</body>
+</html>
